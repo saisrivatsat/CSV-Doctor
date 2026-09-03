@@ -1,0 +1,32 @@
+name: Bug report
+description: Report an incorrect diagnosis, repair, or interface problem
+title: "Bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Use synthetic sample data only. Never attach private or customer CSV files.
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal synthetic sample
+      description: Paste the smallest made-up example that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Safari on iPhone

@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement grounded in a CSV cleanup problem
+title: "Idea: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the broken-file scenario before proposing an interface.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would a safe outcome look like?
+    validations:
+      required: true
+  - type: textarea
+    id: ambiguity
+    attributes:
+      label: What should the app avoid guessing?

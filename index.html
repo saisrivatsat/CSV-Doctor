@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Diagnose and repair broken CSV delimiters, headers, dates, and duplicate rows entirely in your browser."
+    />
+    <meta name="theme-color" content="#f4f1e8" />
+    <title>CSV Doctor — Clean broken CSV files locally</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to CSV workspace</a>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="CSV Doctor home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span>CSV Doctor</span>
+      </a>
+      <div class="privacy-pill">
+        <span class="privacy-dot" aria-hidden="true"></span>
+        Your data stays in this browser
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span>Local-first</span> CSV repair</p>
+          <h1 id="page-title">Messy CSV in.<br /><em>Clean data out.</em></h1>
+          <p class="hero-lede">
+            Find broken separators, untidy headers, mixed date formats, and repeated rows—without
+            uploading your file anywhere.
+          </p>
+          <ul class="trust-list" aria-label="CSV Doctor benefits">
+            <li>Private by design</li>
+            <li>No account</li>
+            <li>Free export</li>
+          </ul>
+        </div>
+
+        <section class="intake-card" aria-labelledby="intake-title">
+          <div class="intake-heading">
+            <div>
+              <p class="step-label">Start here</p>
+              <h2 id="intake-title">Bring your CSV</h2>
+            </div>
+            <span class="file-limit">Up to 10 MB</span>
+          </div>
+
+          <div class="drop-zone" id="drop-zone">
+            <input
+              id="file-input"
+              type="file"
+              tabindex="-1"
+              aria-hidden="true"
+              accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values"
+            />
+            <div class="drop-icon" aria-hidden="true">CSV</div>
+            <strong>Drop a file here</strong>
+            <span>or choose one from your device</span>
+            <button class="button button-dark" id="choose-file" type="button">Choose file</button>
+          </div>
+
+          <div class="or-divider"><span>or paste the data</span></div>
+
+          <label class="sr-only" for="csv-input">CSV data</label>
+          <textarea
+            id="csv-input"
+            rows="6"
+            spellcheck="false"
+            placeholder="name,email,joined&#10;Asha,asha@example.com,12/03/2025"
+          ></textarea>
+
+          <div class="intake-actions">
+            <button class="text-button" id="sample-button" type="button">Try a messy sample</button>
+            <button class="button button-primary" id="diagnose-button" type="button">
+              Diagnose CSV
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+        </section>
+      </section>
+
+      <section class="workspace" id="workspace" aria-labelledby="workspace-title" hidden>
+        <div class="workspace-topline">
+          <div>
+            <p class="eyebrow"><span>Diagnosis</span> Complete</p>
+            <h2 id="workspace-title">Here’s what we found.</h2>
+          </div>
+          <div class="file-summary">
+            <span class="file-badge" aria-hidden="true">CSV</span>
+            <span>
+              <strong id="file-name">pasted-data.csv</strong>
+              <small id="file-meta">Ready to repair</small>
+            </span>
+            <button class="icon-button" id="reset-button" type="button" aria-label="Clear this file">×</button>
+          </div>
+        </div>
+
+        <div class="finding-grid" aria-label="Diagnosis summary">
+          <article class="finding-card">
+            <span class="finding-icon delimiter-icon" aria-hidden="true">;</span>
+            <div>
+              <p>Delimiter</p>
+              <strong id="delimiter-finding">Comma detected</strong>
+              <small id="delimiter-detail">High confidence</small>
+            </div>
+          </article>
+          <article class="finding-card">
+            <span class="finding-icon header-icon" aria-hidden="true">H</span>
+            <div>
+              <p>Headers</p>
+              <strong id="header-finding">Headers detected</strong>
+              <small id="header-detail">No changes needed</small>
+            </div>
+          </article>
+          <article class="finding-card">
+            <span class="finding-icon date-icon" aria-hidden="true">12</span>
+            <div>
+              <p>Dates</p>
+              <strong id="date-finding">No date columns</strong>
+              <small id="date-detail">Nothing changed</small>
+            </div>
+          </article>
+          <article class="finding-card">
+            <span class="finding-icon duplicate-icon" aria-hidden="true">2×</span>
+            <div>
+              <p>Duplicates</p>
+              <strong id="duplicate-finding">No duplicates</strong>
+              <small id="duplicate-detail">All rows are unique</small>
+            </div>
+          </article>
+        </div>
+
+        <div class="workbench">
+          <aside class="repair-panel" aria-labelledby="repair-title">
+            <div class="panel-heading">
+              <span class="number-chip">1</span>
+              <div>
+                <p class="step-label">Choose the rules</p>
+                <h3 id="repair-title">Repair settings</h3>
+              </div>
+            </div>
+
+            <label class="field-label" for="delimiter-select">
+              Separator
+              <span>Override detection if needed</span>
+            </label>
+            <select id="delimiter-select">
+              <option value="auto">Detect automatically</option>
+              <option value="comma">Comma (,)</option>
+              <option value="semicolon">Semicolon (;)</option>
+              <option value="tab">Tab</option>
+              <option value="pipe">Pipe (|)</option>
+            </select>
+
+            <label class="field-label" for="header-select">
+              First row
+              <span>Tell us whether it contains labels</span>
+            </label>
+            <select id="header-select">
+              <option value="auto">Detect automatically</option>
+              <option value="present">Contains headers</option>
+              <option value="missing">Contains data</option>
+            </select>
+
+            <label class="field-label" for="date-order-select">
+              Ambiguous dates
+              <span>Example: 04/05/2025</span>
+            </label>
+            <select id="date-order-select">
+              <option value="auto">Leave unchanged</option>
+              <option value="mdy">Month / day / year</option>
+              <option value="dmy">Day / month / year</option>
+            </select>
+
+            <fieldset class="toggle-group">
+              <legend>Cleanup</legend>
+              <label class="check-row">
+                <span>
+                  <strong>Trim extra spaces</strong>
+                  <small>At the start and end of cells</small>
+                </span>
+                <input id="trim-toggle" type="checkbox" checked />
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+              <label class="check-row">
+                <span>
+                  <strong>Remove exact duplicates</strong>
+                  <small>Keep the first matching row</small>
+                </span>
+                <input id="duplicate-toggle" type="checkbox" checked />
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+              <label class="check-row">
+                <span>
+                  <strong>Remove empty rows</strong>
+                  <small>Ignore blank lines in the file</small>
+                </span>
+                <input id="empty-toggle" type="checkbox" checked />
+                <span class="switch" aria-hidden="true"></span>
+              </label>
+            </fieldset>
+
+            <button class="button button-primary button-full" id="repair-button" type="button">
+              Apply these repairs
+            </button>
+          </aside>
+
+          <section class="preview-panel" aria-labelledby="preview-title">
+            <div class="panel-heading preview-heading">
+              <span class="number-chip">2</span>
+              <div>
+                <p class="step-label">Review the result</p>
+                <h3 id="preview-title">Data preview</h3>
+              </div>
+              <div class="view-tabs" role="tablist" aria-label="Preview version">
+                <button id="before-tab" type="button" role="tab" aria-selected="false">Before</button>
+                <button id="after-tab" type="button" role="tab" aria-selected="true">After</button>
+              </div>
+            </div>
+
+            <div class="table-wrap" id="table-wrap" tabindex="0" aria-label="Scrollable CSV preview">
+              <table id="preview-table"></table>
+            </div>
+            <p class="preview-note" id="preview-note"></p>
+
+            <div class="issue-section">
+              <div class="issue-heading">
+                <h4>Repair notes</h4>
+                <span id="issue-count">0 notes</span>
+              </div>
+              <div class="issue-list" id="issue-list"></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="export-card" aria-labelledby="export-title">
+          <div class="export-mark" aria-hidden="true">✓</div>
+          <div class="export-copy">
+            <p class="step-label">Ready when you are</p>
+            <h3 id="export-title">Your cleaned CSV is ready.</h3>
+            <p id="export-summary">Review the preview, then save a fresh copy.</p>
+          </div>
+          <div class="export-actions">
+            <button class="button button-secondary" id="copy-button" type="button">Copy CSV</button>
+            <button class="button button-dark" id="download-button" type="button">Download cleaned CSV</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="how-it-works" aria-labelledby="how-title">
+        <div>
+          <p class="eyebrow"><span>Four checks</span> One clean file</p>
+          <h2 id="how-title">A careful checkup for tabular data.</h2>
+        </div>
+        <ol>
+          <li><span>01</span><strong>Find the separator</strong><small>Comma, semicolon, tab, or pipe—even when a row switches.</small></li>
+          <li><span>02</span><strong>Repair the labels</strong><small>Fill blank headers, remove extra spaces, and make repeated names unique.</small></li>
+          <li><span>03</span><strong>Standardize dates</strong><small>Convert safe values to ISO and call out dates that need your decision.</small></li>
+          <li><span>04</span><strong>Remove repeats</strong><small>Drop exact duplicate rows while keeping the first original record.</small></li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand footer-brand" href="#top">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span>CSV Doctor</span>
+      </a>
+      <p>Private, local CSV repair. Your file never leaves your device.</p>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
