@@ -136,6 +136,14 @@
               <small id="duplicate-detail">All rows are unique</small>
             </div>
           </article>
+          <article class="finding-card">
+            <span class="finding-icon encoding-icon" aria-hidden="true">Å</span>
+            <div>
+              <p>Encoding</p>
+              <strong id="encoding-finding">UTF-8</strong>
+              <small id="encoding-detail">Browser text</small>
+            </div>
+          </article>
         </div>
 
         <div class="workbench">
@@ -148,6 +156,17 @@
               </div>
             </div>
 
+            <label class="field-label" for="preset-select">
+              Quick setup
+              <span>Rules for common files</span>
+            </label>
+            <select id="preset-select">
+              <option value="balanced">Balanced cleanup</option>
+              <option value="contacts">Contact list</option>
+              <option value="transactions">Bank or expense export</option>
+              <option value="catalog">Product catalog</option>
+            </select>
+
             <label class="field-label" for="delimiter-select">
               Separator
               <span>Override detection if needed</span>
@@ -158,6 +177,18 @@
               <option value="semicolon">Semicolon (;)</option>
               <option value="tab">Tab</option>
               <option value="pipe">Pipe (|)</option>
+            </select>
+
+            <label class="field-label" for="encoding-select">
+              File encoding
+              <span>Repair unusual characters</span>
+            </label>
+            <select id="encoding-select">
+              <option value="auto">Detect automatically</option>
+              <option value="utf-8">UTF-8</option>
+              <option value="windows-1252">Windows-1252</option>
+              <option value="utf-16le">UTF-16 little-endian</option>
+              <option value="utf-16be">UTF-16 big-endian</option>
             </select>
 
             <label class="field-label" for="header-select">
@@ -208,9 +239,37 @@
               </label>
             </fieldset>
 
-            <button class="button button-primary button-full" id="repair-button" type="button">
-              Apply these repairs
-            </button>
+            <fieldset class="duplicate-key-section" id="duplicate-key-section">
+              <legend>Match duplicates using</legend>
+              <p>No selection means the entire row must match.</p>
+              <div class="key-picker" id="duplicate-key-list"></div>
+            </fieldset>
+
+            <div class="repair-actions">
+              <button class="button button-primary" id="repair-button" type="button">
+                Apply these repairs
+              </button>
+              <button class="button button-secondary" id="undo-button" type="button" disabled>
+                Undo
+              </button>
+            </div>
+
+            <div class="recipe-section">
+              <label class="field-label" for="recipe-name">
+                Reusable recipe
+                <span>Rules only—never file data</span>
+              </label>
+              <div class="recipe-save-row">
+                <input id="recipe-name" type="text" maxlength="40" placeholder="Monthly expenses" />
+                <button class="text-button" id="save-recipe-button" type="button">Save</button>
+              </div>
+              <div class="recipe-load-row">
+                <select id="recipe-select" aria-label="Saved cleanup recipes">
+                  <option value="">Load a saved recipe</option>
+                </select>
+                <button class="icon-button" id="delete-recipe-button" type="button" aria-label="Delete selected recipe" disabled>×</button>
+              </div>
+            </div>
           </aside>
 
           <section class="preview-panel" aria-labelledby="preview-title">
@@ -230,6 +289,7 @@
               <table id="preview-table"></table>
             </div>
             <p class="preview-note" id="preview-note"></p>
+            <p class="change-legend"><span aria-hidden="true"></span> Highlighted cells were repaired.</p>
 
             <div class="issue-section">
               <div class="issue-heading">
@@ -237,6 +297,19 @@
                 <span id="issue-count">0 notes</span>
               </div>
               <div class="issue-list" id="issue-list"></div>
+            </div>
+
+            <div class="health-section">
+              <div class="issue-heading">
+                <div>
+                  <h4>Column health</h4>
+                  <p>Catch import risks before another tool changes your data.</p>
+                </div>
+                <span id="health-count">0 columns</span>
+              </div>
+              <div class="health-table-wrap" tabindex="0" aria-label="Scrollable column health report">
+                <table class="health-table" id="health-table"></table>
+              </div>
             </div>
           </section>
         </div>
@@ -248,9 +321,20 @@
             <h3 id="export-title">Your cleaned CSV is ready.</h3>
             <p id="export-summary">Review the preview, then save a fresh copy.</p>
           </div>
+          <label class="export-profile" for="export-profile-select">
+            Export profile
+            <select id="export-profile-select">
+              <option value="standard">Standard CSV</option>
+              <option value="excel">Spreadsheet-safe CSV</option>
+              <option value="semicolon">Semicolon CSV</option>
+              <option value="tsv">Tab-separated TSV</option>
+            </select>
+            <small id="export-profile-detail">Comma-separated, UTF-8, and broadly compatible.</small>
+          </label>
           <div class="export-actions">
-            <button class="button button-secondary" id="copy-button" type="button">Copy CSV</button>
-            <button class="button button-dark" id="download-button" type="button">Download cleaned CSV</button>
+            <button class="button button-secondary" id="report-button" type="button">Repair report</button>
+            <button class="button button-secondary" id="copy-button" type="button">Copy</button>
+            <button class="button button-dark" id="download-button" type="button">Download</button>
           </div>
         </section>
       </section>

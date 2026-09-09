@@ -64,6 +64,133 @@ const MONTHS = new Map([
 
 export const delimiters = DELIMITER_OPTIONS.map((option) => ({ ...option }));
 
+export const exportProfiles = [
+  {
+    key: "standard",
+    label: "Standard CSV",
+    delimiter: ",",
+    lineEnding: "\r\n",
+    bom: false,
+    protectFormulas: false,
+    extension: "csv",
+  },
+  {
+    key: "excel",
+    label: "Spreadsheet-safe CSV",
+    delimiter: ",",
+    lineEnding: "\r\n",
+    bom: true,
+    protectFormulas: true,
+    extension: "csv",
+  },
+  {
+    key: "semicolon",
+    label: "Semicolon CSV",
+    delimiter: ";",
+    lineEnding: "\r\n",
+    bom: false,
+    protectFormulas: false,
+    extension: "csv",
+  },
+  {
+    key: "tsv",
+    label: "Tab-separated TSV",
+    delimiter: "\t",
+    lineEnding: "\n",
+    bom: false,
+    protectFormulas: false,
+    extension: "tsv",
+  },
+];
+
+const ENCODING_LABELS = {
+  "utf-8": "UTF-8",
+  "utf-16le": "UTF-16 LE",
+  "utf-16be": "UTF-16 BE",
+  "windows-1252": "Windows-1252",
+};
+
+const WINDOWS_1252_SPECIALS = [
+  "€", "\u0081", "‚", "ƒ", "„", "…", "†", "‡",
+  "ˆ", "‰", "Š", "‹", "Œ", "\u008D", "Ž", "\u008F",
+  "\u0090", "‘", "’", "“", "”", "•", "–", "—",
+  "˜", "™", "š", "›", "œ", "\u009D", "ž", "Ÿ",
+];
+
+function decodeWindows1252(bytes) {
+  return Array.from(bytes, (byte) => {
+    if (byte >= 0x80 && byte <= 0x9f) return WINDOWS_1252_SPECIALS[byte - 0x80];
+    return String.fromCodePoint(byte);
+  }).join("");
+}
+
+export function decodeBytes(input, requestedEncoding = "auto") {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  let encoding = requestedEncoding;
+  let bomLength = 0;
+  let confidence = requestedEncoding === "auto" ? "medium" : "manual";
+
+  if (requestedEncoding === "auto") {
+    if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+      encoding = "utf-8";
+      bomLength = 3;
+      confidence = "high";
+    } else if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+      encoding = "utf-16le";
+      bomLength = 2;
+      confidence = "high";
+    } else if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+      encoding = "utf-16be";
+      bomLength = 2;
+      confidence = "high";
+    } else {
+      const sampleLength = Math.min(bytes.length, 2000);
+      let evenNulls = 0;
+      let oddNulls = 0;
+      for (let index = 0; index < sampleLength; index += 1) {
+        if (bytes[index] === 0) {
+          if (index % 2 === 0) evenNulls += 1;
+          else oddNulls += 1;
+        }
+      }
+
+      if (oddNulls > sampleLength * 0.2 && evenNulls < sampleLength * 0.05) {
+        encoding = "utf-16le";
+        confidence = "medium";
+      } else if (evenNulls > sampleLength * 0.2 && oddNulls < sampleLength * 0.05) {
+        encoding = "utf-16be";
+        confidence = "medium";
+      } else {
+        try {
+          new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+          encoding = "utf-8";
+          confidence = "high";
+        } catch {
+          encoding = "windows-1252";
+          confidence = "medium";
+        }
+      }
+    }
+  }
+
+  if (!ENCODING_LABELS[encoding]) throw new Error(`Unsupported encoding: ${encoding}`);
+  const contentBytes = bytes.slice(bomLength);
+  const decoded = (encoding === "windows-1252"
+    ? decodeWindows1252(contentBytes)
+    : new TextDecoder(encoding).decode(contentBytes)
+  ).replace(/^\uFEFF/, "");
+  const replacements = [...decoded].filter((character) => character === "\uFFFD").length;
+
+  return {
+    confidence,
+    encoding,
+    hadBom: bomLength > 0,
+    label: ENCODING_LABELS[encoding],
+    replacements,
+    text: decoded,
+  };
+}
+
 function normalizeSource(text) {
   return String(text ?? "").replace(/^\uFEFF/, "");
 }
@@ -464,6 +591,7 @@ function repairHeaders(input, width) {
   const headers = [];
   const seen = new Map();
   const changes = [];
+  const changedIndexes = [];
 
   for (let index = 0; index < width; index += 1) {
     const original = String(input[index] ?? "");
@@ -471,8 +599,10 @@ function repairHeaders(input, width) {
     if (!header) {
       header = `Column ${index + 1}`;
       changes.push(`Named blank column ${index + 1}`);
+      changedIndexes.push(index);
     } else if (header !== original) {
       changes.push(`Trimmed “${original}” to “${header}”`);
+      changedIndexes.push(index);
     }
 
     const key = header.toLowerCase();
@@ -487,11 +617,12 @@ function repairHeaders(input, width) {
       } while (seen.has(header.toLowerCase()));
       seen.set(header.toLowerCase(), 1);
       changes.push(`Renamed duplicate “${base}” to “${header}”`);
+      changedIndexes.push(index);
     }
     headers.push(header);
   }
 
-  return { changes, headers };
+  return { changedIndexes: [...new Set(changedIndexes)], changes, headers };
 }
 
 function normalizeWidth(rows, width) {
@@ -504,6 +635,7 @@ function normalizeWidth(rows, width) {
 
 function normalizeDates(rows, headers, dateOrder) {
   const columns = [];
+  const changes = [];
   let ambiguousCount = 0;
   let convertedCount = 0;
   const output = rows.map((row) => ({ ...row, cells: [...row.cells] }));
@@ -527,6 +659,13 @@ function normalizeDates(rows, headers, dateOrder) {
       } else if (result.iso && result.iso !== current.trim()) {
         row.cells[column] = result.iso;
         columnConverted += 1;
+        changes.push({
+          column,
+          from: current,
+          line: row.line,
+          to: result.iso,
+          type: "date",
+        });
       }
     }
 
@@ -540,16 +679,26 @@ function normalizeDates(rows, headers, dateOrder) {
     });
   }
 
-  return { ambiguousCount, columns, convertedCount, rows: output };
+  return { ambiguousCount, changes, columns, convertedCount, rows: output };
 }
 
-function removeDuplicateRows(rows) {
+function removeDuplicateRows(rows, requestedColumns = []) {
   const seen = new Set();
   const output = [];
   const removedLines = [];
+  const requested = Array.isArray(requestedColumns) ? requestedColumns : [];
+  const columns = [...new Set(requested.map(Number).filter(Number.isInteger))];
 
   for (const row of rows) {
-    const key = JSON.stringify(row.cells);
+    const selected = columns.length ? columns.map((column) => row.cells[column] ?? "") : row.cells;
+    const normalized = columns.length
+      ? selected.map((value) => String(value).trim().toLocaleLowerCase())
+      : selected;
+    if (columns.length && normalized.every((value) => value === "")) {
+      output.push(row);
+      continue;
+    }
+    const key = JSON.stringify(normalized);
     if (seen.has(key)) {
       removedLines.push(row.line);
     } else {
@@ -558,14 +707,20 @@ function removeDuplicateRows(rows) {
     }
   }
 
-  return { removedLines, rows: output };
+  return { columns, removedLines, rows: output };
+}
+
+function isFormulaLike(value) {
+  const text = String(value);
+  if (/^[+-]\d+(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(text)) return false;
+  return /^[=+\-@\t\r\n]/.test(text);
 }
 
 function formulaLikeCells(rows) {
   const matches = [];
   for (const row of rows) {
     for (let column = 0; column < row.cells.length; column += 1) {
-      if (/^[=+@]/.test(String(row.cells[column]).trim())) {
+      if (isFormulaLike(String(row.cells[column]).trim())) {
         matches.push({ column, line: row.line });
       }
     }
@@ -573,8 +728,9 @@ function formulaLikeCells(rows) {
   return matches;
 }
 
-function escapeCsvCell(value, delimiter) {
-  const string = String(value ?? "");
+function escapeCsvCell(value, delimiter, protectFormulas = false) {
+  let string = String(value ?? "");
+  if (protectFormulas && isFormulaLike(string.trimStart())) string = `'${string}`;
   if (
     string.includes(delimiter) ||
     string.includes('"') ||
@@ -587,10 +743,90 @@ function escapeCsvCell(value, delimiter) {
   return string;
 }
 
-export function serializeCsv(rows, delimiter = ",") {
-  return `${rows
-    .map((row) => row.map((cell) => escapeCsvCell(cell, delimiter)).join(delimiter))
-    .join("\r\n")}\r\n`;
+export function serializeCsv(rows, delimiter = ",", userOptions = {}) {
+  const options = {
+    bom: false,
+    lineEnding: "\r\n",
+    protectFormulas: false,
+    ...userOptions,
+  };
+  const output = `${rows
+    .map((row) =>
+      row.map((cell) => escapeCsvCell(cell, delimiter, options.protectFormulas)).join(delimiter),
+    )
+    .join(options.lineEnding)}${options.lineEnding}`;
+  return `${options.bom ? "\uFEFF" : ""}${output}`;
+}
+
+export function createCsvExport(rows, profileKey = "standard") {
+  const profile = exportProfiles.find((candidate) => candidate.key === profileKey);
+  if (!profile) throw new Error(`Unsupported export profile: ${profileKey}`);
+  return {
+    content: serializeCsv(rows, profile.delimiter, profile),
+    profile: { ...profile },
+  };
+}
+
+function profileColumns(rows, headers) {
+  return headers.map((name, column) => {
+    const values = rows.map((row) => String(row.cells[column] ?? ""));
+    const populated = values.filter((value) => value !== "");
+    const typeCounts = new Map();
+    for (const value of populated) {
+      const type = dataType(value);
+      typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
+    }
+    const rankedTypes = [...typeCounts.entries()].sort((left, right) => right[1] - left[1]);
+    const leadingZeros = populated.filter((value) => /^0\d{2,}$/.test(value)).length;
+    const longIntegers = populated.filter((value) => /^[+-]?\d{16,}$/.test(value)).length;
+    const formulas = populated.filter((value) => isFormulaLike(value.trim())).length;
+    const unique = new Set(populated.map((value) => value.toLocaleLowerCase())).size;
+    const warnings = [];
+    if (values.length - populated.length) warnings.push(`${values.length - populated.length} blank`);
+    if (rankedTypes.length > 1) warnings.push("mixed types");
+    if (leadingZeros) warnings.push(`${leadingZeros} leading zero`);
+    if (longIntegers) warnings.push(`${longIntegers} long ID`);
+    if (formulas) warnings.push(`${formulas} formula-like`);
+
+    return {
+      column,
+      fillRate: values.length ? Math.round((populated.length / values.length) * 100) : 0,
+      formulas,
+      leadingZeros,
+      longIntegers,
+      name,
+      primaryType: rankedTypes[0]?.[0] ?? "empty",
+      typeCounts: Object.fromEntries(rankedTypes),
+      unique,
+      warnings,
+    };
+  });
+}
+
+export function createRepairReport(result, metadata = {}) {
+  return {
+    product: "CSV Doctor",
+    version: "0.2.0",
+    fileName: metadata.fileName ?? null,
+    generatedAt: metadata.generatedAt ?? null,
+    delimiter: result.delimiter,
+    header: {
+      changes: result.header.changes,
+      detected: result.header.detected,
+      generated: result.header.generated,
+      headers: result.header.headers,
+    },
+    dates: {
+      ambiguousCount: result.dates.ambiguousCount,
+      columns: result.dates.columns,
+      convertedCount: result.dates.convertedCount,
+    },
+    duplicates: result.duplicates,
+    shape: result.shape,
+    columns: result.columns,
+    issues: result.issues,
+    changes: result.changes.map(({ column, line, type }) => ({ column, line, type })),
+  };
 }
 
 export function doctorCsv(text, userOptions = {}) {
@@ -600,6 +836,7 @@ export function doctorCsv(text, userOptions = {}) {
   const options = {
     dateOrder: "auto",
     delimiter: "auto",
+    duplicateColumns: [],
     header: "auto",
     removeDuplicates: true,
     skipEmptyRows: true,
@@ -626,12 +863,22 @@ export function doctorCsv(text, userOptions = {}) {
 
   let workingRows = rawRows;
   let trimmedCells = 0;
+  const cellChanges = [];
   if (options.trimWhitespace) {
     workingRows = workingRows.map((row) => ({
       ...row,
-      cells: row.cells.map((cell) => {
+      cells: row.cells.map((cell, column) => {
         const trimmed = String(cell).trim();
-        if (trimmed !== cell) trimmedCells += 1;
+        if (trimmed !== cell) {
+          trimmedCells += 1;
+          cellChanges.push({
+            column,
+            from: cell,
+            line: row.line,
+            to: trimmed,
+            type: "whitespace",
+          });
+        }
         return trimmed;
       }),
     }));
@@ -643,10 +890,11 @@ export function doctorCsv(text, userOptions = {}) {
     options.dateOrder,
   );
   workingRows = dateResult.rows;
+  cellChanges.push(...dateResult.changes);
 
   const duplicateResult = options.removeDuplicates
-    ? removeDuplicateRows(workingRows)
-    : { removedLines: [], rows: workingRows };
+    ? removeDuplicateRows(workingRows, options.duplicateColumns)
+    : { columns: [], removedLines: [], rows: workingRows };
   workingRows = duplicateResult.rows;
 
   const formulaCells = formulaLikeCells(workingRows);
@@ -692,10 +940,13 @@ export function doctorCsv(text, userOptions = {}) {
     });
   }
   if (duplicateResult.removedLines.length) {
+    const duplicateLabels = duplicateResult.columns.map(
+      (column) => repairedHeaders.headers[column] ?? `Column ${column + 1}`,
+    );
     issues.push({
-      detail: `${duplicateResult.removedLines.length} repeated row${duplicateResult.removedLines.length === 1 ? " was" : "s were"} removed; the first copy was kept.`,
+      detail: `${duplicateResult.removedLines.length} repeated row${duplicateResult.removedLines.length === 1 ? " was" : "s were"} removed${duplicateLabels.length ? ` using ${duplicateLabels.join(", ")}` : ""}; the first copy was kept.`,
       severity: "fixed",
-      title: "Exact duplicates removed",
+      title: duplicateLabels.length ? "Key-based duplicates removed" : "Exact duplicates removed",
       type: "duplicate",
     });
   }
@@ -709,7 +960,7 @@ export function doctorCsv(text, userOptions = {}) {
   }
   if (formulaCells.length) {
     issues.push({
-      detail: `${formulaCells.length} cell${formulaCells.length === 1 ? " starts" : "s start"} with =, +, or @. Review before opening the export in spreadsheet software.`,
+      detail: `${formulaCells.length} cell${formulaCells.length === 1 ? " starts" : "s start"} with a spreadsheet formula character. Review it or choose the spreadsheet-safe export.`,
       severity: "warning",
       title: "Formula-like values detected",
       type: "security",
@@ -717,9 +968,27 @@ export function doctorCsv(text, userOptions = {}) {
   }
 
   const outputRows = [repairedHeaders.headers, ...workingRows.map((row) => row.cells)];
+  const delimiterChanges = parsed.repairs.flatMap((repair) => {
+    const row = workingRows.find((candidate) => candidate.line === repair.line);
+    return row
+      ? row.cells.map((value, column) => ({
+          column,
+          from: null,
+          line: repair.line,
+          to: value,
+          type: "delimiter",
+        }))
+      : [];
+  });
+  const changes = [...delimiterChanges, ...cellChanges].filter((change) =>
+    workingRows.some((row) => row.line === change.line),
+  );
+  const columns = profileColumns(workingRows, repairedHeaders.headers);
   return {
     beforeRows,
+    changes,
     cleanedCsv: serializeCsv(outputRows),
+    columns,
     delimiter: {
       confidence: delimiter.confidence,
       key: delimiter.key,
@@ -728,6 +997,7 @@ export function doctorCsv(text, userOptions = {}) {
       value: delimiter.value,
     },
     duplicates: {
+      columns: duplicateResult.columns,
       removed: duplicateResult.removedLines.length,
       removedLines: duplicateResult.removedLines,
     },
@@ -737,12 +1007,16 @@ export function doctorCsv(text, userOptions = {}) {
       detected: headerDetected,
       generated: !hasHeader,
       headers: repairedHeaders.headers,
+      changedIndexes: hasHeader
+        ? repairedHeaders.changedIndexes
+        : repairedHeaders.headers.map((_, index) => index),
       repaired: repairedHeaders.changes.length,
     },
     issues,
     options,
     outputRows,
     rows: workingRows.map((row) => row.cells),
+    rowLines: workingRows.map((row) => row.line),
     shape: {
       blankRowsRemoved: parsed.blankRowsRemoved,
       columns: repairedHeaders.headers.length,

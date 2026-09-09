@@ -16,16 +16,20 @@ interoperability rather than add unrelated data tools.
 
 - Per-cell change highlighting in the preview
 - Downloadable repair report alongside the cleaned CSV
-- Configurable output delimiter and line ending
+- Standard CSV, spreadsheet-safe CSV, semicolon CSV, and TSV export profiles
 - Duplicate matching by selected key columns
-- Column-level data type summary and invalid-value counts
+- Column-level type, fill, uniqueness, leading-zero, long-ID, and formula-risk summary
+- UTF-8, UTF-16, and Windows-1252 encoding repair
+- Quick setups, local repair recipes, and undo
 
 ## 0.3 — Larger and repeatable work
 
 - Streaming parsing for files larger than the current browser limit
-- Save and import repair recipes locally
 - Batch processing without uploading data
+- Import and export repair recipes as settings-only JSON
 - Optional CSV dialect controls for quote and escape characters
+- Column rename, reorder, and removal with a visible change plan
+- Explicit column rules for required values, number ranges, email shape, and allowed categories
 
 ## Not planned for the core app
 

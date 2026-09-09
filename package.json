@@ -1,6 +1,6 @@
 {
   "name": "csv-doctor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Diagnose and repair delimiters, headers, dates, and duplicates entirely in the browser.",

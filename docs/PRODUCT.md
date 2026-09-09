@@ -3,9 +3,10 @@
 ## Problem
 
 Small CSV defects often stop imports, reports, migrations, and analysis. People commonly receive a
-file whose separator is unclear, whose first row is not usable as a header, whose dates mix regional
-formats, or whose records repeat. Fixing those defects by hand is slow and risky, while uploading
-business data to an unknown converter creates an avoidable privacy concern.
+file whose separator or encoding is unclear, whose first row is not usable as a header, whose dates
+mix regional formats, whose identifiers are at risk of spreadsheet conversion, or whose records
+repeat. Fixing those defects by hand is slow and risky, while uploading business data to an unknown
+converter creates an avoidable privacy concern.
 
 ## Product promise
 
@@ -17,10 +18,11 @@ ambiguous.
 
 1. Drop a `.csv`, `.tsv`, or `.txt` file, or paste its contents.
 2. Run a diagnosis using conservative automatic settings.
-3. Review delimiter, header, date, duplicate, and structure findings.
-4. Override delimiter, header presence, or ambiguous date order if necessary.
-5. Compare the original interpretation with the repaired result.
-6. Copy or download a comma-separated export.
+3. Review delimiter, encoding, header, date, duplicate, structure, and column-health findings.
+4. Choose a quick setup, override uncertain rules, or select duplicate key columns.
+5. Compare the original interpretation with highlighted repairs and undo when needed.
+6. Save the settings as a local recipe for recurring files.
+7. Copy or download the appropriate CSV/TSV profile and, when useful, a metadata-only repair report.
 
 ## Functional rules
 
@@ -37,6 +39,12 @@ ambiguous.
 - Let the user explicitly override the inference.
 - Trim labels, name blanks as `Column N`, and suffix duplicates as `Name (2)`.
 
+### Encodings
+
+- Auto-detect UTF-8, UTF-16 little-endian, UTF-16 big-endian, and Windows-1252 byte streams.
+- Honor Unicode byte-order markers and allow a manual override for uncertain legacy files.
+- Report replacement characters instead of silently claiming a clean decode.
+
 ### Dates
 
 - Normalize ISO-like, unambiguous numeric, and English month-name dates to `YYYY-MM-DD`.
@@ -44,19 +52,30 @@ ambiguous.
 - Leave month/day versus day/month values unchanged in automatic mode.
 - Apply an explicit regional order only when the user selects it.
 
-### Duplicates and structure
+### Duplicates, identifiers, and structure
 
-- Remove only exact duplicate rows after enabled cleanup.
+- Remove exact duplicate rows or compare an explicit set of selected key columns after cleanup.
 - Keep the first copy.
+- Compare selected keys case-insensitively, while preserving records with entirely blank keys.
 - Preserve extra data columns and pad short records.
 - Surface malformed quotes and uneven row widths for review.
+- Warn when columns contain leading zeros, 16-plus-digit integers, or mixed data types.
+
+### Repeatability and export
+
+- Provide destination profiles for standard CSV, spreadsheet-safe CSV, semicolon CSV, and TSV.
+- Prefix formula-like values only in the explicitly selected spreadsheet-safe profile.
+- Keep a one-level history of applied rule changes and expose undo.
+- Persist named recipes in browser storage; recipes contain rule selections only.
+- Export a JSON report containing repair metadata and counts, not source row values.
 
 ## Privacy and trust
 
 - File contents are read by browser APIs and never sent over a network.
-- The app has no account, server, analytics, cookies, or local persistence.
+- The app has no account, server, analytics, or cookies.
+- Saved recipes use browser storage and contain settings only; CSV contents are never persisted.
 - The content security policy blocks network connections in the deployed app.
-- Exported CSV can contain formula-like values; the app warns without changing potentially valid data.
+- Standard exports preserve formula-like values; the spreadsheet-safe profile prefixes them.
 
 ## MVP success criteria
 

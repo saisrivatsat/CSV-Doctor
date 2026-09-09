@@ -427,6 +427,23 @@ h1 em::after {
   margin-top: 1.4rem;
 }
 
+.repair-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+}
+
+.repair-actions .button {
+  min-width: 0;
+}
+
+.repair-actions .button:disabled,
+.icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .text-button,
 .icon-button,
 .view-tabs button {
@@ -471,6 +488,17 @@ select {
   background: var(--surface-strong);
   border: 1px solid var(--line);
   border-radius: 9px;
+}
+
+.recipe-save-row input {
+  width: 100%;
+  min-width: 0;
+  min-height: 39px;
+  padding: 0 0.7rem;
+  color: var(--ink);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 textarea {
@@ -583,7 +611,7 @@ textarea::placeholder {
 
 .finding-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.8rem;
   margin-bottom: 0.8rem;
 }
@@ -625,6 +653,10 @@ textarea::placeholder {
   background: #e9ddf0;
 }
 
+.encoding-icon {
+  background: #d8ebe9;
+}
+
 .finding-card p {
   margin: 0 0 0.18rem;
   color: var(--muted);
@@ -654,7 +686,7 @@ textarea::placeholder {
 
 .workbench {
   display: grid;
-  grid-template-columns: 310px minmax(0, 1fr);
+  grid-template-columns: 330px minmax(0, 1fr);
   background: var(--surface);
   border: 1px solid rgba(23, 35, 31, 0.14);
   border-radius: 16px;
@@ -805,6 +837,99 @@ select {
   outline-offset: 3px;
 }
 
+.duplicate-key-section {
+  padding: 0;
+  margin: 1.35rem 0 0;
+  border: 0;
+}
+
+.duplicate-key-section legend {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.duplicate-key-section > p {
+  margin: 0.25rem 0 0.65rem;
+  color: var(--muted);
+  font-size: 0.61rem;
+  line-height: 1.4;
+}
+
+.key-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  max-height: 104px;
+  overflow: auto;
+}
+
+.key-chip {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.key-chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.key-chip span {
+  max-width: 140px;
+  padding: 0.42rem 0.58rem;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.key-chip input:checked + span {
+  color: white;
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.key-chip input:focus-visible + span {
+  outline: 3px solid #2b77c5;
+  outline-offset: 2px;
+}
+
+.duplicate-key-section:disabled .key-picker {
+  opacity: 0.45;
+}
+
+.recipe-section {
+  padding-top: 0.3rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid rgba(23, 35, 31, 0.1);
+}
+
+.recipe-save-row,
+.recipe-load-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.recipe-save-row .text-button {
+  padding: 0.55rem 0.2rem;
+}
+
+.recipe-load-row {
+  margin-top: 0.45rem;
+}
+
+.recipe-load-row select {
+  min-width: 0;
+}
+
 .preview-panel {
   min-width: 0;
 }
@@ -893,10 +1018,46 @@ tbody .row-number {
   color: #b6bab7;
 }
 
+th.changed-cell,
+td.changed-cell {
+  position: relative;
+  color: var(--green-dark);
+  background: #e2f3e9;
+  box-shadow: inset 0 0 0 1px rgba(24, 91, 72, 0.12);
+}
+
+.changed-cell::after {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  background: #2f9c75;
+  border-radius: 50%;
+  content: "";
+}
+
 .preview-note {
   margin: 0.65rem 0 0;
   color: var(--muted);
   font-size: 0.63rem;
+}
+
+.change-legend {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.61rem;
+}
+
+.change-legend span {
+  width: 10px;
+  height: 10px;
+  background: #e2f3e9;
+  border: 1px solid rgba(24, 91, 72, 0.2);
+  border-radius: 2px;
 }
 
 .issue-section {
@@ -976,8 +1137,54 @@ tbody .row-number {
   font-size: 0.68rem;
 }
 
+.health-section {
+  margin-top: 1.5rem;
+}
+
+.health-section .issue-heading {
+  align-items: flex-end;
+}
+
+.health-section .issue-heading p {
+  margin: 0.22rem 0 0;
+  color: var(--muted);
+  font-size: 0.61rem;
+}
+
+.health-table-wrap {
+  max-height: 245px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.health-table {
+  min-width: 610px;
+}
+
+.health-table th,
+.health-table td {
+  padding: 0.58rem 0.65rem;
+}
+
+.type-cell {
+  color: var(--green-dark);
+  font-weight: 750;
+}
+
+.health-warning {
+  color: #8c4a13;
+  background: #fff8e9;
+}
+
+.health-good {
+  color: var(--green);
+  font-weight: 750;
+}
+
 .export-card {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) minmax(190px, 230px) auto;
   gap: 1rem;
   align-items: center;
   padding: 1.25rem 1.5rem;
@@ -1021,6 +1228,38 @@ tbody .row-number {
 .export-actions {
   display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.export-profile {
+  display: block;
+  color: #cce2d9;
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.export-profile select {
+  min-height: 38px;
+  margin-top: 0.35rem;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: normal;
+  background: #eff7f3;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.export-profile small {
+  display: block;
+  margin-top: 0.34rem;
+  color: #b7d5c8;
+  font-size: 0.58rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .export-card .button-dark {
@@ -1113,12 +1352,17 @@ footer p {
   }
 
   .export-card {
-    flex-wrap: wrap;
+    grid-template-columns: auto 1fr;
+  }
+
+  .export-profile,
+  .export-actions {
+    grid-column: 2;
+    width: 100%;
   }
 
   .export-actions {
-    width: 100%;
-    margin-left: 54px;
+    justify-content: flex-start;
   }
 }
 
@@ -1222,7 +1466,9 @@ footer p {
     min-width: calc(100% - 54px);
   }
 
+  .export-profile,
   .export-actions {
+    grid-column: 1 / -1;
     flex-direction: column;
     width: 100%;
     margin-left: 0;

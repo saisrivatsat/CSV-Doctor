@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  createCsvExport,
+  createRepairReport,
+  decodeBytes,
   detectDelimiter,
   detectHeader,
   doctorCsv,
@@ -105,4 +108,75 @@ test("warns about formula-like values but preserves them", () => {
 test("serializes commas, quotes, newlines, and surrounding spaces safely", () => {
   const output = serializeCsv([["name", "note"], [" Ada ", 'A "quote", here']]);
   assert.equal(output, 'name,note\r\n" Ada ","A ""quote"", here"\r\n');
+});
+
+test("detects UTF-8, UTF-16, and Windows-1252 file encodings locally", () => {
+  const utf8 = decodeBytes(new Uint8Array([0xef, 0xbb, 0xbf, 0x61, 0x2c, 0x62]));
+  assert.equal(utf8.encoding, "utf-8");
+  assert.equal(utf8.hadBom, true);
+  assert.equal(utf8.text, "a,b");
+
+  const utf16 = decodeBytes(
+    Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("a,b", "utf16le")]),
+  );
+  assert.equal(utf16.encoding, "utf-16le");
+  assert.equal(utf16.text, "a,b");
+
+  const windows = decodeBytes(new Uint8Array([0x70, 0x72, 0x69, 0x63, 0x65, 0x2c, 0x80]));
+  assert.equal(windows.encoding, "windows-1252");
+  assert.equal(windows.text, "price,€");
+});
+
+test("removes key-based duplicates case-insensitively but keeps blank keys", () => {
+  const result = doctorCsv("name,email\nAda,A@example.com\nOther,a@example.com\nBlank,\nBlank,", {
+    duplicateColumns: [1],
+  });
+  assert.equal(result.duplicates.removed, 1);
+  assert.deepEqual(result.duplicates.columns, [1]);
+  assert.deepEqual(result.rows, [["Ada", "A@example.com"], ["Blank", ""], ["Blank", ""]]);
+});
+
+test("profiles risky identifier and formula-like columns without altering values", () => {
+  const result = doctorCsv(
+    "Account ID,Amount,Note\n00123,-12.50,=REVIEW()\n1234567890123456,15,",
+  );
+  const id = result.columns.find((column) => column.name === "Account ID");
+  const amount = result.columns.find((column) => column.name === "Amount");
+  const note = result.columns.find((column) => column.name === "Note");
+  assert.equal(id.leadingZeros, 1);
+  assert.equal(id.longIntegers, 1);
+  assert.equal(amount.formulas, 0);
+  assert.equal(note.formulas, 1);
+  assert.ok(note.warnings.includes("1 blank"));
+});
+
+test("records cell and header changes for review", () => {
+  const result = doctorCsv(" Name ,Joined\n Ada ,03/14/2025");
+  assert.deepEqual(result.header.changedIndexes, [0]);
+  assert.ok(result.changes.some((change) => change.type === "whitespace" && change.column === 0));
+  assert.ok(result.changes.some((change) => change.type === "date" && change.column === 1));
+});
+
+test("builds spreadsheet-safe and TSV export profiles", () => {
+  const rows = [["name", "value"], ["Ada", "=2+2"]];
+  const excel = createCsvExport(rows, "excel");
+  assert.equal(excel.content, "\uFEFFname,value\r\nAda,'=2+2\r\n");
+  assert.equal(excel.profile.extension, "csv");
+
+  const tsv = createCsvExport(rows, "tsv");
+  assert.equal(tsv.content, "name\tvalue\nAda\t=2+2\n");
+  assert.equal(tsv.profile.extension, "tsv");
+});
+
+test("creates a metadata-only repair report without copying source records", () => {
+  const result = doctorCsv(" Name ,email\n Ada ,ada@example.com");
+  const report = createRepairReport(result, {
+    fileName: "contacts.csv",
+    generatedAt: "2026-09-09T00:00:00.000Z",
+  });
+  assert.equal(report.fileName, "contacts.csv");
+  assert.equal(report.version, "0.2.0");
+  assert.equal(report.shape.outputRows, 1);
+  assert.equal(JSON.stringify(report).includes("ada@example.com"), false);
+  assert.equal(JSON.stringify(report).includes("Ada"), false);
 });

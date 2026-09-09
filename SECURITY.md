@@ -6,13 +6,18 @@ Only the latest deployed version is supported.
 
 ## Data handling
 
-CSV Doctor processes file contents in the browser. It has no backend, analytics, cookies, or local
-persistence. The deployment policy blocks outbound connections, so data is not uploaded by the app.
+CSV Doctor processes file contents in the browser. It has no backend, analytics, or cookies. The
+deployment policy blocks outbound connections, so file data is not uploaded by the app. Named repair
+recipes use browser storage, but contain only selected rules and export preferences—not file names,
+cell values, or CSV contents.
 
-CSV exports may contain cells beginning with `=`, `+`, or `@`. Some spreadsheet applications can
-interpret those values as formulas. CSV Doctor reports them and preserves the original data; review
-such values before opening an export in spreadsheet software or importing data from an untrusted
-source.
+Standard CSV exports may contain cells beginning with `=`, `+`, `-`, or `@`. Some spreadsheet
+applications can interpret those values as formulas. CSV Doctor reports them and preserves the
+original data. Its spreadsheet-safe profile prefixes formula-like values with an apostrophe, but
+users should still review untrusted data before opening it in spreadsheet software.
+
+The repair report contains findings, counts, column names, and change metadata. It does not include
+source rows or cell values, although file and column names can themselves be sensitive.
 
 ## Reporting a vulnerability
 
